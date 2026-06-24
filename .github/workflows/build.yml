@@ -1,4 +1,5 @@
 name: Build unsigned IPA
+
 on:
   workflow_dispatch:
 
@@ -8,30 +9,43 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Show available schemes
+      - name: Show project targets and schemes
         run: xcodebuild -list -project Tethering.xcodeproj
 
-      - name: Build (no signing)
+      - name: Build (no signing, by target)
         run: |
+          set -o pipefail
           xcodebuild \
             -project Tethering.xcodeproj \
-            -scheme "Tethering" \
+            -target Tethering \
             -configuration Release \
             -sdk iphoneos \
             -derivedDataPath build \
+            ARCHS=arm64 \
+            ONLY_ACTIVE_ARCH=NO \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
-            build
+            build 2>&1 | tee build.log
 
       - name: Package into IPA
         run: |
           APP=$(find build/Build/Products/Release-iphoneos -maxdepth 1 -name "*.app" | head -n1)
+          echo "Found app: $APP"
           mkdir Payload
           cp -R "$APP" Payload/
           zip -r Tethering-unsigned.ipa Payload
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload IPA
+        if: success()
+        uses: actions/upload-artifact@v4
         with:
           name: Tethering-unsigned-ipa
           path: Tethering-unsigned.ipa
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
