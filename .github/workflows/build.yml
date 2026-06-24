@@ -17,7 +17,7 @@ jobs:
           set -o pipefail
           xcodebuild \
             -project Tethering.xcodeproj \
-            -target Tethering \
+            -scheme Tethering \
             -configuration Release \
             -sdk iphoneos \
             -derivedDataPath build \
